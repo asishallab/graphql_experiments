@@ -6,25 +6,20 @@ services:
     ports:
       - "5000:5000"
     environment:
-        #DB_DEFAULT_ROLE: postgres
-        #DB_GRAPHQL_PATH: "/graphql"
-        #DB_GRAPHIQL_PATH: "/graphiql"
-        #PG_SECRET: "kodiaq"
-        #DB_SCHEMA: "public"
-        PGUSER: kodiaq
-        PGPASSWORD: kodiaq
-        PGHOST: kodiaq_db
-        PGDATABASE: kodiaq_test
+        PGUSER: graphql
+        PGPASSWORD: graphql
+        PGHOST: graphql_db
+        PGDATABASE: graphql_development
         PGPORT: 5432
     links:
-        - kodiaq_db
+        - graphql_db
 
-  kodiaq_db:
+  graphql_db:
     build:
       context: .
-      dockerfile: kodiaq_db.txt
+      dockerfile: graphql_db.txt
     volumes:
-      - data:/var/lib/postgresql/data
+      - graphql_data:/var/lib/postgresql/data
 
 volumes:
-  data: {}
+  graphql_data: {}

@@ -1,0 +1,19 @@
+version: "3.2"
+
+services:
+  graphql_psql:
+    build:
+      context: .
+      dockerfile: graphql_psql.txt
+    links:
+        - graphql_db
+
+  graphql_db:
+    build:
+      context: .
+      dockerfile: graphql_db.txt
+    volumes:
+      - graphql_data:/var/lib/postgresql/data
+
+volumes:
+  graphql_data: {}

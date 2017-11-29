@@ -6,7 +6,9 @@ services:
       context: .
       dockerfile: graphql_psql.txt
     links:
-        - graphql_db
+      - graphql_db
+    volumes:
+      - .:/opt/graphql_experiments
 
   graphql_db:
     build:

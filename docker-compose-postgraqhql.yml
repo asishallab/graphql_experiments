@@ -1,0 +1,30 @@
+version: "3.2"
+
+services:
+  postgraphql:
+    image: postgraphql/postgraphql:latest
+    ports:
+      - "5000:5000"
+    environment:
+        #DB_DEFAULT_ROLE: postgres
+        #DB_GRAPHQL_PATH: "/graphql"
+        #DB_GRAPHIQL_PATH: "/graphiql"
+        #PG_SECRET: "kodiaq"
+        #DB_SCHEMA: "public"
+        PGUSER: kodiaq
+        PGPASSWORD: kodiaq
+        PGHOST: kodiaq_db
+        PGDATABASE: kodiaq_test
+        PGPORT: 5432
+    links:
+        - kodiaq_db
+
+  kodiaq_db:
+    build:
+      context: .
+      dockerfile: kodiaq_db.txt
+    volumes:
+      - data:/var/lib/postgresql/data
+
+volumes:
+  data: {}

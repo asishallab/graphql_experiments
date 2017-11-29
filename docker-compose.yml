@@ -1,0 +1,22 @@
+version: "3.2"
+
+services:
+  graphql_app:
+    build:
+      context: .
+      dockerfile: graphql_app.txt
+    # links:
+    #   - graphql_db
+    ports:
+      - "4040:4040"
+    command: 'npm start'
+      # 
+      # graphql_db:
+      # build:
+      # context: .
+      # dockerfile: graphql_db.txt
+      # volumes:
+      # - graphql_experiment_data:/var/lib/postgresql/data
+      # 
+      # volumes:
+      # graphql_experiment_data: {}

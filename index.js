@@ -18,7 +18,17 @@ const db = {
     1: {
       id: 1,
       text: 'boring post one',
-      user: 1
+      user_id: 1
+    },
+    2: {
+      id: 2,
+      text: 'boring post two',
+      user_id: 1
+    },
+    3: {
+      id: 3,
+      text: 'Most interesting post alpha',
+      user_id: 2
     }
   }
 }
@@ -37,13 +47,20 @@ var schema = buildSchema(
   type User {
     id: ID!
     name: String!
-    posts: [Post!]
+    hisPosts(
+      before: Cursor
+      after: Cursor
+      first: Int
+      last: Int
+      offset: Int
+    ): [Post!]
   }
   type Post {
     id: ID!
     text: String!
-    user: User!
+    user_id: Int!
   }
+  scalar Cursor
 `
 );
 
@@ -52,16 +69,39 @@ var root = {
   hello: () => {
     return 'Hello world!';
   },
-  user: (args) => {
+  user: (args, req, bar, baz) => {
     console.log('user query called with args: ' + JSON.stringify(args));
-    return db.users[args.id]
+    console.log('req.query: ' + JSON.stringify(req.query));
+    console.log('req.params: ' + JSON.stringify(req.params));
+    console.log('req.originalUrl: ' + JSON.stringify(req.originalUrl));
+    console.log('req.url: ' + JSON.stringify(req.url));
+    // console.log('bar: ' + JSON.stringify(bar));
+    // console.log('baz: ' + JSON.stringify(baz));
+    u = db.users[args.id]
+    u.postsByUserId = Object.values(db.posts).filter(function(p) {
+      return p.user_id === u.id
+    })
+    return u
   },
+  user.hisPosts (x,y,z) => {
+    console.log("hisPosts called");
+    return []
+  }
   post: (args) => {
     return db.posts[args.id]
   }
 };
 
 var app = express();
+
+// Just for debugging
+app.use(function(req, res, next) {
+  console.log("GOT REQUEST !");
+  console.log('req.query: ' + JSON.stringify(req.query));
+  next(); // Passing the request to the next handler in the stack.
+});
+
+// GraphQL
 app.use('/graphql', graphqlHTTP({
   schema: schema,
   rootValue: root,

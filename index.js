@@ -1,111 +1,193 @@
 var express = require('express');
 var graphqlHTTP = require('express-graphql');
-var { buildSchema } = require('graphql');
+var {
+  buildSchema
+} = require('graphql');
+const db = require('./db.js');
+const crud = require('./crud.js');
+const klingonResolvers = require('./klingon_resolvers.js')
 
-// Mock a Database:
-const db = {
-  users: {
-    1: {
-      id: 1,
-      name: 'Foo'
-    },
-    2: {
-      id: 2,
-      name: 'Bar'
-    }
-  },
-  posts: {
-    1: {
-      id: 1,
-      text: 'boring post one',
-      user_id: 1
-    },
-    2: {
-      id: 2,
-      text: 'boring post two',
-      user_id: 1
-    },
-    3: {
-      id: 3,
-      text: 'Most interesting post alpha',
-      user_id: 2
-    }
-  }
-}
+// sequelize.sync()
+//   .then(() => Klingon.create({
+//     petach: 'janedoe',
+//     birthday: 1980
+//   }))
+//   .then(jane => {
+//     console.log(jane.toJSON());
+//   });
 
 // Construct a schema, using GraphQL schema language
 var schema = buildSchema(
-  `type Query {
-    hello: String
-    user(id: ID!): User
-    post(id: ID!): Post
-  }
-  input QueryArg {
-    key: String!
-    value: String!
-  }
-  type User {
-    id: ID!
-    name: String!
-    hisPosts(
-      before: Cursor
-      after: Cursor
-      first: Int
-      last: Int
-      offset: Int
-    ): [Post!]
-  }
-  type Post {
-    id: ID!
-    text: String!
-    user_id: Int!
-  }
-  scalar Cursor
 `
+type Crud {
+  name: String!
+
+}
+
+type Person {
+  name: String!
+  dogs(name: String): [Dog]
+  myFriend: Person
+}
+
+type Dog {
+  name: String!
+  bark(times: Int): [String]
+}
+
+input QueryArgs {
+  petach: String,
+  a: QueryArgs
+} 
+
+input SearchArg {
+  field: String
+  operator: String
+  value: String
+  searchArgs: [SearchArg]
+}
+
+enum OrderDir {
+  ASC
+  DESC
+}
+
+input OrderArg {
+  field: String
+  direction: OrderDir
+}
+
+input KlingonForPetach {
+  petach: String  
+}
+
+input ReadArg {
+  limit: Int
+  offset: Int
+  orderArgs: [OrderArg] 
+  searchArg: SearchArg
+}
+
+type Klingon {
+  petach: String!
+  birthday: Int
+  friend: Klingon
+  myFriend: Klingon
+  warriors: [Klingon]
+  getWarriors(
+    limit: Int
+    offset: Int
+    where: String
+  ): [Klingon]
+}
+
+type RandomDie {
+  numSides: Int!
+  rollOnce: Int!
+  roll(numRolls: Int!): [Int]
+}
+
+type Query {
+  readCrud(searchArg: SearchArg): [Crud]!
+  test(arg: String): Person
+  getDie(numSides: Int): RandomDie
+  getPerson(name: String): Person
+  getKlingon(arg: KlingonForPetach): Klingon
+  klingon(id: ID): Klingon!
+  allKlingons(readArg: ReadArg): [Klingon]
+}`
 );
 
-// The root provides a resolver function for each API endpoint
+// This class implements the RandomDie GraphQL type
+class RandomDie {
+  constructor(numSides) {
+    this.numSides = numSides;
+  }
+
+  rollOnce() {
+    return 1 + Math.floor(Math.random() * this.numSides);
+  }
+
+  roll({
+    numRolls
+  }) {
+    var output = [];
+    for (var i = 0; i < numRolls; i++) {
+      output.push(this.rollOnce());
+    }
+    return output;
+  }
+}
+
+// This class represents a Dog
+class Dog {
+  constructor(name) {
+    this.name = name;
+  }
+
+  bark({
+    times
+  }) {
+    return "Barking " + times + " times.";
+  }
+}
+
+// This class represents a Person
+class Person {
+  constructor(name) {
+    this.name = name;
+  }
+
+  dogs({
+    name
+  }) {
+    return [new Dog(name)]
+  }
+
+  friend() {
+    return new Person('Friendly Friend')
+  }
+}
+
+// The root provides the top-level API endpoints
 var root = {
-  hello: () => {
-    return 'Hello world!';
+  test: function(a1, a2, a3, a4) {
+    console.log(`a1: ${Object.keys(a1)}, a2: ${JSON.stringify(a2)}, a3: ${JSON.stringify(a3)}, a4: ${JSON.stringify(a4)}`);
+    return new Person('test called')
   },
-  user: (args, req, bar, baz) => {
-    console.log('user query called with args: ' + JSON.stringify(args));
-    console.log('req.query: ' + JSON.stringify(req.query));
-    console.log('req.params: ' + JSON.stringify(req.params));
-    console.log('req.originalUrl: ' + JSON.stringify(req.originalUrl));
-    console.log('req.url: ' + JSON.stringify(req.url));
-    // console.log('bar: ' + JSON.stringify(bar));
-    // console.log('baz: ' + JSON.stringify(baz));
-    u = db.users[args.id]
-    u.postsByUserId = Object.values(db.posts).filter(function(p) {
-      return p.user_id === u.id
-    })
-    return u
+  getDie: function({
+    numSides
+  }) {
+    return new RandomDie(numSides || 6);
   },
-  user.hisPosts (x,y,z) => {
-    console.log("hisPosts called");
-    return []
-  }
-  post: (args) => {
-    return db.posts[args.id]
-  }
-};
+  getPerson: function({
+    name
+  }) {
+    return new Person(name);
+  },
+  getKlingon: function({arg}) {
+    console.log(`argument "arg": ${JSON.stringify(arg)}, "arg.petach": ${arg.petach}`);
+    return db.Klingon.find({
+      where: {
+        petach: arg.petach
+      },
+      include: [{
+        all: true
+      }]
+    }).then(function(x) {
+      return x
+    });
+  },
+  klingon: klingonResolvers.klingonById,
+  allKlingons: klingonResolvers.allKlingons
+}
 
 var app = express();
-
-// Just for debugging
-app.use(function(req, res, next) {
-  console.log("GOT REQUEST !");
-  console.log('req.query: ' + JSON.stringify(req.query));
-  next(); // Passing the request to the next handler in the stack.
-});
-
-// GraphQL
 app.use('/graphql', graphqlHTTP({
   schema: schema,
   rootValue: root,
   graphiql: true,
+  context: { foo: 'bar' }
 }));
 app.listen(4040);
 console.log('Running a GraphQL API server at localhost:4040/graphql');
